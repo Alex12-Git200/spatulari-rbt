@@ -1,0 +1,13 @@
+# Python
+__pycache__/
+*.pyc
+.env
+
+# Bot secrets
+config.py
+levels.json
+token.py
+
+#other
+audio/*
+*.exe
