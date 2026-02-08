@@ -714,9 +714,10 @@ async def loop(ctx):
     await ctx.send(f"Loop mode is now {status}")
 
 async def load_cogs():
+    await bot.load_extension("cogs.core")
+    await bot.load_extension("cogs.utils")
     await bot.load_extension("cogs.fun")
     await bot.load_extension("cogs.moderation")
-    await bot.load_extension("cogs.utils")
 
 
 asyncio.run(load_cogs())

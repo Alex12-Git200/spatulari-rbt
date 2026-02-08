@@ -4,6 +4,8 @@ import discord
 from config import COMMANDS_CHANNEL_ID, TRUSTED_MEMBER_ROLE_ID
 from utils.checks import command_channel
 
+
+
 def trusted_or_staff(ctx):
     return (
         any(role.id == TRUSTED_MEMBER_ROLE_ID for role in ctx.author.roles)
@@ -11,7 +13,7 @@ def trusted_or_staff(ctx):
     )
 
 class Fun(commands.Cog):
-    def __init__(self, bot):
+    def __init__(self, bot, name="Fun"):
         self.bot = bot
 
     @commands.command()

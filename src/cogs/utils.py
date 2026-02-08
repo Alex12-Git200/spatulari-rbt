@@ -3,6 +3,9 @@ from discord.ext import commands
 import time
 from config import *
 from utils.checks import command_channel
+import asyncio
+import sys
+
 
 class Utils(commands.Cog):
     def __init__(self, bot):
@@ -111,7 +114,9 @@ class Utils(commands.Cog):
     async def reload(self, ctx, extension: str):
         try:
             await self.bot.unload_extension(extension)
+
             await self.bot.load_extension(extension)
+            await asyncio.sleep(2)
             await ctx.send(f"🔄 Reloaded `{extension}` ✅")
         except commands.ExtensionNotLoaded:
             await ctx.send(f"⚠️ `{extension}` is not loaded")
@@ -119,7 +124,43 @@ class Utils(commands.Cog):
             await ctx.send(f"❌ `{extension}` not found")
         except Exception as e:
             await ctx.send(f"💥 Reload failed:\n```{e}```")
-    
+
+    @commands.command()
+    @commands.check(command_channel)
+    async def botinfo(self, ctx):
+        await ctx.send(
+            f"🤖 **Bot Info**\n"
+            f"🧠 Python: {sys.version.split()[0]}\n"
+            f"📦 discord.py: {discord.__version__}\n"
+            f"📂 Loaded cogs: {len(self.bot.extensions)}\n"
+            f"🧑‍💻 Github: https://github.com/Alex12-Git200/spatulari-rbt"
+        )
+
+    @commands.command()
+    @commands.check(command_channel)
+    async def ping(self, ctx):
+        ws_latency = round(self.bot.latency * 1000)
+
+        before = time.perf_counter()
+        msg = await ctx.send("🏓 Pinging...")
+        after = time.perf_counter()
+
+        api_latency = round((after - before) * 1000)
+
+        await msg.edit(
+            content=(
+                f"🏓 **Pong!**\n"
+                f"📡 WS latency: **{ws_latency}ms**\n"
+                f"⚡ API latency: **{api_latency}ms**"
+            )
+        )
+
+    @commands.command()
+    @commands.has_role(OWNER_ROLE_ID)
+    async def cogs(self, ctx):
+        cogs = "\n".join(self.bot.cogs.keys())
+        await ctx.send(f"🧩 Loaded cogs:\n```{cogs}```")
+
 
 async def setup(bot):
     await bot.add_cog(Utils(bot))
