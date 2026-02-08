@@ -8,6 +8,7 @@ PROTECTED_EXTENSIONS = {
 UNLOAD_ORDER = [
     "cogs.fun",
     "cogs.moderation",
+    "cogs.music",
     "cogs.utils",
 ]
 
@@ -15,6 +16,7 @@ LOAD_ORDER = [
     "cogs.utils",
     "cogs.moderation",
     "cogs.fun",
+    "cogs.music",
 ]
 
 
@@ -83,6 +85,20 @@ class Core(commands.Cog):
 
         await ctx.send("\n".join(report))
 
+    @commands.command()
+    @commands.has_role(OWNER_ROLE_ID)
+    async def reloadall(self, ctx):
+        failed = []
+        for ext in list(self.bot.extensions):
+            try:
+                await self.bot.reload_extension(ext)
+            except:
+                failed.append(ext)
+
+        if failed:
+            await ctx.send(f"⚠️ Failed to reload:\n```{failed}```")
+        else:
+            await ctx.send("🔄 All cogs reloaded ✅")
 
 async def setup(bot):
     await bot.add_cog(Core(bot))

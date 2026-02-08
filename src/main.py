@@ -22,6 +22,8 @@ intents.members = True
 
 
 bot = commands.Bot(command_prefix="!", intents=intents)
+bot.start_time = time.time()
+
 bot.remove_command("help")
 
 
@@ -32,8 +34,6 @@ LAST_VIDEO_ID = None
 STATUS_MESSAGE_ID = None
 YOUTUBE_CHANNEL_ID = "UCFVnjoLRjhiBJxkYNXUePjQ"
 RSS_URL = f"https://www.youtube.com/feeds/videos.xml?channel_id={YOUTUBE_CHANNEL_ID}"
-QUEUE = []
-LOOP_ENABLED = False
 user_cooldowns = {}
 
 async def get_status_message():
@@ -152,8 +152,7 @@ async def notify_owner(text):
         except:
             print(f"Failed to DM owner: {text}")
 
-def music_channel_commands(ctx):
-    return ctx.channel.id == MUSIC_COMMANDS_CHANNEL_ID
+
 
 async def handle_member_join(member):
     print("🔥 handle_member_join CALLED")
@@ -185,34 +184,6 @@ async def handle_member_join(member):
         await member.add_roles(role)
         print("Role added")
 
-def create_source(path):
-    volume_filter = f"-filter:a volume={VOLUME / 100}"
-    return discord.FFmpegOpusAudio(
-        executable="ffmpeg.exe",
-        source=path,
-        options=f"-vn {volume_filter}",
-        bitrate=128
-    )
-
-def play_next(ctx):
-    vc = ctx.guild.voice_client
-    if vc is None or not QUEUE:
-        return
-
-    title, make_source = QUEUE.pop(0)
-
-    source = make_source()
-
-    def after_playing(error):
-        if error:
-            print("Playback error:", error)
-
-        if LOOP_ENABLED:
-            QUEUE.append((title, make_source))
-
-        bot.loop.call_soon_threadsafe(play_next, ctx)
-
-    vc.play(source, after=after_playing)
 
 
 @bot.event
@@ -222,8 +193,6 @@ async def on_ready():
     if not check_youtube.is_running():
         check_youtube.start()
 
-    # if not check_tiktok.is_running():
-    #     check_tiktok.start()
 
     print("Bot is online")
 
@@ -272,13 +241,6 @@ async def on_message(message):
 async def on_member_join(member):
     await handle_member_join(member)
 
-@bot.event
-async def on_voice_state_update(member, before, after):
-    vc = member.guild.voice_client
-    if vc and len(vc.channel.members) == 1:
-        vc.stop()
-        QUEUE.clear()
-        await vc.disconnect()
 
 
 @tasks.loop(minutes=5)
@@ -313,39 +275,6 @@ async def before_check_youtube():
     if video:
         LAST_VIDEO_ID = video["url"]
         print("📌 Initial YouTube video set:", video["title"])
-
-# @tasks.loop(minutes=5)
-# async def check_tiktok():
-#     global LAST_TIKTOK_ID
-
-#     video = get_latest_tiktok()
-#     if video is None:
-#         return
-
-#     video_id = video["url"]
-
-#     if video_id == LAST_TIKTOK_ID:
-#         return
-
-#     LAST_TIKTOK_ID = video_id
-
-#     channel = bot.get_channel()
-#     if channel:
-#         await channel.send(
-#             f"📢 **New TikTok posted!**\n"
-#             f"🎵 **{video['title']}**\n"
-#             f"🔗 {video['url']}"
-#         )
-
-# @check_tiktok.before_loop
-# async def before_check_tiktok():
-#     global LAST_TIKTOK_ID
-#     await bot.wait_until_ready()
-
-#     video = get_latest_tiktok()
-#     if video:
-#         LAST_TIKTOK_ID = video["url"]
-#         print("📌 Initial TikTok set:", video["title"])
 
 
 @bot.command()
@@ -384,270 +313,6 @@ async def testytpost_error(ctx, error):
     if isinstance(error, commands.MissingRole):
         await ctx.send("❌ You don't have permission to use this.")
 
-# @bot.command()
-# @commands.has_role(OWNER_ROLE_ID)
-# async def testttpost(ctx):
-#     video = get_latest_tiktok()
-#     if video is None:
-#         await ctx.send("❌ No TikToks found.")
-#         return
-
-#     channel = bot.get_channel(TT_ANNOUNCE_CHANNEL_ID)
-#     if channel:
-#         await channel.send(
-#             f"🧪 **TEST: New TikTok!**\n"
-#             f"🎵 **{video['title']}**\n"
-#             f"🔗 {video['url']}"
-#         )
-
-#     await ctx.send("✅ Test TikTok post sent.")
-
-
-# @testttpost.error
-# async def testttpost_error(ctx, error):
-#     if isinstance(error, commands.MissingRole):
-#         await ctx.send("❌ You don't have permission to use this.")
-
-
-@bot.command()
-@commands.check(command_channel)
-async def greetme(ctx):
-    await ctx.send(f"Hello **{ctx.author.mention}** 👋")
-
-@bot.command()
-@commands.check(music_channel_commands)
-@commands.has_any_role(OWNER_ROLE_ID, MOD_ROLE_ID, ADIN_ROLE_ID, TRUSTED_MEMBER_ROLE_ID)
-async def join(ctx):
-    if ctx.author.voice is None:
-        await ctx.send("Join a voice channel first")
-        return
-
-    if ctx.voice_client is not None:
-        await ctx.send("I'm already in a voice channel")
-        return
-
-    await ctx.author.voice.channel.connect()
-    await ctx.send("Joined the voice channel")
-
-@bot.command()
-@commands.check(music_channel_commands)
-@commands.has_any_role(OWNER_ROLE_ID, MOD_ROLE_ID, ADIN_ROLE_ID, TRUSTED_MEMBER_ROLE_ID)
-async def leave(ctx):
-    if ctx.voice_client is None:
-        await ctx.send("I'm not in a voice channel")
-        return
-
-    ctx.voice_client.stop()
-    QUEUE.clear()
-    await ctx.voice_client.disconnect()
-    await ctx.send("Left the voice channel")
-
-@bot.command()
-@commands.check(music_channel_commands)
-@commands.has_any_role(OWNER_ROLE_ID, MOD_ROLE_ID, ADIN_ROLE_ID, TRUSTED_MEMBER_ROLE_ID)
-async def play(ctx, filename: str):
-    if ctx.author.voice is None:
-        await ctx.send("Join a voice channel first")
-        return
-
-    if ctx.voice_client is None:
-        await ctx.author.voice.channel.connect()
-
-    path = os.path.join("../audio", filename)
-    if not os.path.isfile(path):
-        await ctx.send(f"File {filename} not found")
-        return
-
-    def make_local_source():
-        return create_source(path)
-
-    vc = ctx.voice_client
-    item = (filename, make_local_source)
-
-    if not vc.is_playing():
-        QUEUE.insert(0, item)
-        play_next(ctx)
-        await ctx.send(f"Playing {filename}")
-    else:
-        QUEUE.append(item)
-        await ctx.send(f"Queued {filename}")
-
-@bot.command()
-@commands.check(music_channel_commands)
-@commands.has_any_role(OWNER_ROLE_ID, MOD_ROLE_ID, ADIN_ROLE_ID, TRUSTED_MEMBER_ROLE_ID)
-async def playnow(ctx, filename: str):
-    if ctx.author.voice is None:
-        await ctx.send("Join a voice channel first")
-        return
-
-    if ctx.voice_client is None:
-        await ctx.author.voice.channel.connect()
-
-    path = os.path.join("audio", filename)
-    if not os.path.isfile(path):
-        await ctx.send(f"File {filename} not found")
-        return
-
-    def make_local_source():
-        return create_source(path)
-
-    QUEUE.insert(0, (filename, make_local_source))
-
-    vc = ctx.voice_client
-    if vc.is_playing():
-        vc.stop()
-    else:
-        play_next(ctx)
-
-    await ctx.send(f"Playing {filename} now")
-
-@bot.command()
-@commands.check(music_channel_commands)
-@commands.has_any_role(OWNER_ROLE_ID, MOD_ROLE_ID, ADIN_ROLE_ID, TRUSTED_MEMBER_ROLE_ID)
-async def yt(ctx, *, query: str):
-    if ctx.author.voice is None:
-        await ctx.send("Join a voice channel first")
-        return
-
-    if ctx.voice_client is None:
-        await ctx.author.voice.channel.connect()
-
-    video_id, title = get_youtube_audio(query)
-
-    def make_yt_source():
-        ydl_opts = {
-            "format": "bestaudio",
-            "quiet": True
-        }
-
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            info = ydl.extract_info(video_id, download=False)
-            url = info["url"]
-
-        return discord.FFmpegOpusAudio(
-            executable="ffmpeg.exe", #TODO: Add this to path
-            source=url,
-            options="-vn",
-            bitrate=128
-        )
-
-    vc = ctx.voice_client
-    item = (title, make_yt_source)
-
-    if not vc.is_playing():
-        QUEUE.insert(0, item)
-        play_next(ctx)
-        await ctx.send(f"Playing **{title}**")
-    else:
-        QUEUE.append(item)
-        await ctx.send(f"Queued **{title}**")
-
-@bot.command()
-@commands.check(music_channel_commands)
-@commands.has_any_role(OWNER_ROLE_ID, MOD_ROLE_ID, ADIN_ROLE_ID, TRUSTED_MEMBER_ROLE_ID)
-async def skip(ctx):
-    vc = ctx.voice_client
-    if vc is None or not vc.is_playing():
-        await ctx.send("Nothing is playing")
-        return
-
-    vc.stop()
-    await ctx.send("Skipped current song")
-
-@bot.command()
-@commands.check(music_channel_commands)
-@commands.has_any_role(OWNER_ROLE_ID, MOD_ROLE_ID, ADIN_ROLE_ID, TRUSTED_MEMBER_ROLE_ID)
-async def stop(ctx, target: str = None):
-    vc = ctx.voice_client
-    if vc is None:
-        await ctx.send("I'm not in a voice channel")
-        return
-
-    if target == "queue":
-        QUEUE.clear()
-        if vc.is_playing():
-            vc.stop()
-        await ctx.send("Stopped music and cleared queue")
-    else:
-        if vc.is_playing():
-            vc.stop()
-            await ctx.send("Stopped current song")
-        else:
-            await ctx.send("Nothing is playing")
-
-@bot.command()
-@commands.check(music_channel_commands)
-@commands.has_any_role(OWNER_ROLE_ID, MOD_ROLE_ID, ADIN_ROLE_ID, TRUSTED_MEMBER_ROLE_ID)
-async def pause(ctx):
-    vc = ctx.voice_client
-    if vc is None or not vc.is_playing():
-        await ctx.send("Nothing is playing")
-        return
-
-    vc.pause()
-    await ctx.send("Paused")
-
-@bot.command()
-@commands.check(music_channel_commands)
-@commands.has_any_role(OWNER_ROLE_ID, MOD_ROLE_ID, ADIN_ROLE_ID, TRUSTED_MEMBER_ROLE_ID)
-async def resume(ctx):
-    vc = ctx.voice_client
-    if vc is None or not vc.is_paused():
-        await ctx.send("Nothing is paused")
-        return
-
-    vc.resume()
-    await ctx.send("Resumed")
-
-@bot.command()
-@commands.check(music_channel_commands)
-@commands.has_any_role(OWNER_ROLE_ID, MOD_ROLE_ID, ADIN_ROLE_ID, TRUSTED_MEMBER_ROLE_ID)
-async def queue(ctx):
-    if not QUEUE:
-        await ctx.send("Queue is empty")
-        return
-
-    msg = "**Queue:**\n"
-    for i, (title, _) in enumerate(QUEUE, start=1):
-        msg += f"{i}. {title}\n"
-
-    await ctx.send(msg)
-
-@bot.command()
-@commands.check(music_channel_commands)
-@commands.has_any_role(OWNER_ROLE_ID, MOD_ROLE_ID, ADIN_ROLE_ID, TRUSTED_MEMBER_ROLE_ID)
-async def volume(ctx, vol: int):
-    global VOLUME
-
-    if vol < 0 or vol > 200:
-        await ctx.send("Volume must be between 0 and 200")
-        return
-
-    VOLUME = vol
-    await ctx.send(f"Volume set to {vol}%")
-
-@bot.command()
-@commands.has_any_role(OWNER_ROLE_ID, MOD_ROLE_ID, ADIN_ROLE_ID, TRUSTED_MEMBER_ROLE_ID)
-@commands.check(music_channel_commands)
-async def list(ctx):
-    audio_dir = "audio"
-
-    if not os.path.isdir(audio_dir):
-        await ctx.send("Audio folder not found")
-        return
-
-    files = [
-        f for f in os.listdir(audio_dir)
-        if f.lower().endswith((".mp3", ".wav", ".ogg", ".opus"))
-    ]
-
-    if not files:
-        await ctx.send("No audio files found")
-        return
-
-    msg = "**Available songs:**\n"
-    msg += "\n".join(f"- {f}" for f in files)
-    await ctx.send(msg) 
 
 
 @bot.command()
@@ -687,7 +352,7 @@ async def leaderboard(ctx):
         user = bot.get_user(int(u_id))
         name = user.name if user else "Unknown"
         msg += f"{i}. **{name}** - Level {data['level']}\n"
-    
+
     await ctx.send(msg)
 
 @bot.command()
@@ -703,21 +368,13 @@ async def restart(ctx):
     # Restart the process FIRST
     os.execv(sys.executable, [sys.executable] + sys.argv)
 
-@bot.command()
-@commands.check(music_channel_commands)
-@commands.has_any_role(OWNER_ROLE_ID, MOD_ROLE_ID, ADIN_ROLE_ID, TRUSTED_MEMBER_ROLE_ID)
-async def loop(ctx):
-    global LOOP_ENABLED
-    LOOP_ENABLED = not LOOP_ENABLED
-
-    status = "**ON**" if LOOP_ENABLED else "⏹**OFF**"
-    await ctx.send(f"Loop mode is now {status}")
 
 async def load_cogs():
     await bot.load_extension("cogs.core")
     await bot.load_extension("cogs.utils")
     await bot.load_extension("cogs.fun")
     await bot.load_extension("cogs.moderation")
+    await bot.load_extension("cogs.music")
 
 
 asyncio.run(load_cogs())

@@ -15,7 +15,7 @@ def trusted_or_staff(ctx):
 class Fun(commands.Cog):
     def __init__(self, bot, name="Fun"):
         self.bot = bot
-
+    
     @commands.command()
     @commands.check(command_channel)
     async def coinflip(self, ctx):
@@ -64,15 +64,6 @@ class Fun(commands.Cog):
         member = member or ctx.author
         await ctx.send(f"{member.mention} go outside. Touch some grass. 🌱")
 
-    @commands.command()
-    @commands.check(command_channel)
-    async def whois(self, ctx, member: discord.Member = None):
-        member = member or ctx.author
-        await ctx.send(
-            f"🧍 **{member.name}**\n"
-            f"🆔 ID: `{member.id}`\n"
-            f"📅 Joined: {member.joined_at.strftime('%d-%m-%Y')}"
-        )
 
 
 async def setup(bot):
