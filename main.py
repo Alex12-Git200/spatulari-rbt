@@ -10,7 +10,8 @@ from datetime import timedelta
 import json
 import sys
 import asyncio
-from token import TOKEN_STR
+from bot_token import TOKEN_STR
+from config import *
 
 START_TIME = time.time()
 
@@ -22,18 +23,7 @@ intents.members = True
 bot = commands.Bot(command_prefix="!", intents=intents)
 bot.remove_command("help")
 
-MUSIC_COMMANDS_CHANNEL_ID = 1469478360236429332
-WELCOME_CHANNEL_ID = 1469679326331928701
-OWNER_ROLE_ID = 1469477460038123612
-MEMBER_ROLE_ID = 1469680598380580916
-YT_ANNOUNCE_CHANNEL_ID = 1469689826273001534
-TT_ANNOUNCE_CHANNEL_ID = 1469694152030552158
-COMMANDS_CHANNEL_ID = 1469699542365638835
-STATUS_CHANNEL_ID = 1469835005424435366
-TRUSTED_MEMBER_ROLE_ID = 1469717439989420042
-ADIN_ROLE_ID = 1469673980398141511
-MOD_ROLE_ID = 1469674196094161111
-MY_USER_ID = 1318991936455053464
+
 TIKTOK_USERNAME = "spatulari"
 TIKTOK_RSS_URL = f"https://rsshub.app/tiktok/user/{TIKTOK_USERNAME}"
 LAST_TIKTOK_ID = None
@@ -41,10 +31,8 @@ LAST_VIDEO_ID = None
 STATUS_MESSAGE_ID = None
 YOUTUBE_CHANNEL_ID = "UCFVnjoLRjhiBJxkYNXUePjQ"
 RSS_URL = f"https://www.youtube.com/feeds/videos.xml?channel_id={YOUTUBE_CHANNEL_ID}"
-VOLUME = 100
 QUEUE = []
 LOOP_ENABLED = False
-LEVELS_FILE = "levels.json"
 user_cooldowns = {}
 
 async def get_status_message():
@@ -344,7 +332,7 @@ async def before_check_youtube():
 
 #     LAST_TIKTOK_ID = video_id
 
-#     channel = bot.get_channel(YT_ANNOUNCE_CHANNEL_ID)
+#     channel = bot.get_channel()
 #     if channel:
 #         await channel.send(
 #             f"📢 **New TikTok posted!**\n"
@@ -662,64 +650,8 @@ async def list(ctx):
 
     msg = "**Available songs:**\n"
     msg += "\n".join(f"- {f}" for f in files)
-    await ctx.send(msg)
+    await ctx.send(msg) 
 
-
-@bot.command()
-@commands.check(command_channel)
-async def coinflip(ctx):
-    await ctx.send(f"🪙 Coinflip: **{random.choice(['Heads', 'Tails'])}**")
-
-@bot.command()
-@commands.check(command_channel)
-async def dice(ctx):
-    await ctx.send(f"🎲 You rolled a **{random.randint(1, 6)}**")
-
-@bot.command()
-@commands.check(command_channel)
-async def eightball(ctx, *, question: str = None):
-    if question is None:
-        await ctx.send("🎱 Ask me a question first")
-        return
-
-    responses = [
-        "Yes 😎", "No", "Maybe 👀", "Absolutely 🔥",
-        "Ask again later 💤", "Nah chief ❌"
-    ]
-    await ctx.send(f"🎱 **{random.choice(responses)}**")
-
-@bot.command()
-@commands.check(command_channel)
-async def say(ctx, *, msg: str):
-    await ctx.message.delete()
-    await ctx.send(msg)
-
-@bot.command()
-@commands.check(command_channel)
-async def slap(ctx, member: discord.Member):
-    await ctx.send(f"👊 {ctx.author.mention} slapped {member.mention}")
-    
-@bot.command()
-@commands.check(command_channel)
-async def rate(ctx, *, thing: str):
-    score = random.randint(0, 10)
-    await ctx.send(f"📈 I rate **{thing}** a **{score}/10**")
-
-@bot.command()
-@commands.check(command_channel)
-async def whois(ctx, member: discord.Member = None):
-    member = member or ctx.author
-    await ctx.send(
-        f"🧍 **{member.name}**\n"
-        f"🆔 ID: `{member.id}`\n"
-        f"📅 Joined: {member.joined_at.strftime('%d-%m-%Y')}"
-    )
-
-@bot.command()
-@commands.check(command_channel)
-async def touchgrass(ctx, member: discord.Member = None):
-    member = member or ctx.author
-    await ctx.send(f"{member.mention} go outside. Now. 🌱")
 
 @bot.command()
 @commands.check(command_channel)
@@ -743,7 +675,7 @@ async def serverinfo(ctx):
 @commands.has_permissions(kick_members=True)
 async def kick(ctx, member: discord.Member, *, reason="No reason provided"):
     if member == ctx.author:
-        await ctx.send("💀 You can't kick yourself")
+        await ctx.send("You can't kick yourself")
         return
 
     if member.top_role >= ctx.author.top_role:
@@ -761,7 +693,7 @@ async def kick(ctx, member: discord.Member, *, reason="No reason provided"):
 @commands.has_permissions(ban_members=True)
 async def ban(ctx, member: discord.Member, *, reason="No reason provided"):
     if member == ctx.author:
-        await ctx.send("💀 You can't ban yourself")
+        await ctx.send("You can't ban yourself")
         return
 
     if member.top_role >= ctx.author.top_role:
@@ -947,4 +879,8 @@ async def loop(ctx):
     status = "**ON**" if LOOP_ENABLED else "⏹**OFF**"
     await ctx.send(f"Loop mode is now {status}")
 
+async def load_cogs():
+    await bot.load_extension("cogs.fun")
+
+asyncio.run(load_cogs())
 bot.run(TOKEN_STR)

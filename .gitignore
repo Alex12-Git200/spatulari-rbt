@@ -6,8 +6,9 @@ __pycache__/
 # Bot secrets
 config.py
 levels.json
-token.py
+bot_token.py
 
 #other
 audio/*
 *.exe
+__init__.py
