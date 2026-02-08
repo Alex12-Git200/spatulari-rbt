@@ -32,11 +32,6 @@ class Utils(commands.Cog):
 
     @commands.command()
     @commands.check(command_channel)
-    async def about(self, ctx):
-        await ctx.send("🤖 Custom bot built by the community. Join to help shape it 👀")
-
-    @commands.command()
-    @commands.check(command_channel)
     async def help(self, ctx):
         embed = discord.Embed(
             title="🤖 Bot Help",
@@ -44,6 +39,7 @@ class Utils(commands.Cog):
             color=0x00ffcc
         )
 
+        # 🎵 Music
         embed.add_field(
             name="🎵 Music Commands",
             value=(
@@ -52,42 +48,48 @@ class Utils(commands.Cog):
                 "`!yt <query>`\n"
                 "`!pause`, `!resume`, `!skip`\n"
                 "`!stop [queue]`\n"
-                "`!queue`, `!loop`, `!volume <0-200>`, `!list`\n"
+                "`!queue`, `!loop`, `!volume <0-200>`, `!list`"
             ),
             inline=False
         )
 
-        # NEW SECTION: Leveling
+        # 📈 Leveling
         embed.add_field(
-            name="📈 Leveling & Economy",
+            name="📈 Leveling",
             value=(
-                "`!rank [@user]` · Check your level & XP\n"
-                "`!leaderboard` · See the top chatters\n"
-                "💡 *Reach **Level 15** to unlock Trusted Member!*"
+                "`!rank [@user]` · Check level & XP\n"
+                "`!leaderboard` · Top chatters\n"
+                "💡 *Level **15** unlocks **Trusted Member***"
             ),
             inline=False
         )
 
+        # 🎲 Fun
         embed.add_field(
             name="🎲 Fun Commands",
             value=(
                 "`!coinflip`, `!dice`\n"
                 "`!eightball <question>`\n"
                 "`!rate <thing>`\n"
-                "`!slap @user`, `!touchgrass @user`"
+                "`!slap @user`\n"
+                "`!touchgrass [@user]`\n"
+                "`!say <message>` *(trusted/staff)*"
             ),
             inline=False
         )
 
+        # ℹ️ Info
         embed.add_field(
             name="ℹ️ Info Commands",
             value=(
-                "`!about`, `!uptime`\n"
-                "`!serverinfo`, `!whois [@user]`"
+                "`!about`, `!uptime`, `!ping`\n"
+                "`!serverinfo`, `!whois [@user]`\n"
+                "`!botinfo`, `!cogs`, `!extensions`"
             ),
             inline=False
         )
 
+        # 🛠️ Moderation
         embed.add_field(
             name="🛠️ Moderation",
             value=(
@@ -98,16 +100,25 @@ class Utils(commands.Cog):
             inline=False
         )
 
+        # 👑 Owner / Core
         if ctx.author.id == MY_USER_ID:
             embed.add_field(
-                name="👑 Owner Only",
-                value="`!dm @user <msg>`, `!testjoin`, `!exit` ",
+                name="👑 Owner / Core",
+                value=(
+                    "`!load <cog>` · `!unload <cog>`\n"
+                    "`!reload <cog>`\n"
+                    "`!loadall` · `!unloadall`\n"
+                    "`!restart`, `!exit`"
+                ),
                 inline=False
             )
 
-        embed.set_footer(text=f"Requested by {ctx.author.name} | Built by Spatulari 🧠")
+        embed.set_footer(
+            text=f"Requested by {ctx.author.name} | Built by Spatulari 🧠"
+        )
 
         await ctx.send(embed=embed)
+
 
     @commands.command()
     @commands.has_role(OWNER_ROLE_ID)
@@ -133,7 +144,7 @@ class Utils(commands.Cog):
             f"🧠 Python: {sys.version.split()[0]}\n"
             f"📦 discord.py: {discord.__version__}\n"
             f"📂 Loaded cogs: {len(self.bot.extensions)}\n"
-            f"🧑‍💻 Github: https://github.com/Alex12-Git200/spatulari-rbt"
+            f"🧑‍💻 Github: https://github.com/spatulari/spatulari-rbt"
         )
 
     @commands.command()
