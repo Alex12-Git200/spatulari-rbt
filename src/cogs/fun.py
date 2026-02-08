@@ -2,15 +2,13 @@ from discord.ext import commands
 import random
 import discord
 from config import COMMANDS_CHANNEL_ID, TRUSTED_MEMBER_ROLE_ID
+from utils.checks import command_channel
 
 def trusted_or_staff(ctx):
     return (
         any(role.id == TRUSTED_MEMBER_ROLE_ID for role in ctx.author.roles)
         or ctx.author.guild_permissions.manage_messages
     )
-
-def command_channel(ctx):
-    return ctx.channel.id == COMMANDS_CHANNEL_ID
 
 class Fun(commands.Cog):
     def __init__(self, bot):

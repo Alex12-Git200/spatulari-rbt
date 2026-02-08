@@ -12,6 +12,7 @@ import sys
 import asyncio
 from bot_token import TOKEN_STR
 from config import *
+from utils.checks import command_channel
 
 START_TIME = time.time()
 
@@ -50,8 +51,7 @@ async def get_status_message():
             STATUS_MESSAGE_ID = None
 
     # Look for an existing pinned status message
-    pins = await channel.pins()
-    for msg in pins:
+    async for msg in channel.pins():
         if msg.author == bot.user:
             STATUS_MESSAGE_ID = msg.id
             return msg
@@ -154,9 +154,6 @@ async def notify_owner(text):
 
 def music_channel_commands(ctx):
     return ctx.channel.id == MUSIC_COMMANDS_CHANNEL_ID
-
-def command_channel(ctx):
-    return ctx.channel.id == COMMANDS_CHANNEL_ID
 
 async def handle_member_join(member):
     print("🔥 handle_member_join CALLED")
@@ -456,7 +453,7 @@ async def play(ctx, filename: str):
     if ctx.voice_client is None:
         await ctx.author.voice.channel.connect()
 
-    path = os.path.join("audio", filename)
+    path = os.path.join("../audio", filename)
     if not os.path.isfile(path):
         await ctx.send(f"File {filename} not found")
         return
@@ -654,169 +651,6 @@ async def list(ctx):
 
 
 @bot.command()
-@commands.check(command_channel)
-async def uptime(ctx):
-    seconds = int(time.time() - START_TIME)
-    mins, secs = divmod(seconds, 60)
-    hours, mins = divmod(mins, 60)
-    await ctx.send(f"⏱️ Uptime: **{hours}h {mins}m {secs}s**")
-
-@bot.command()
-@commands.check(command_channel)    
-async def serverinfo(ctx):
-    g = ctx.guild
-    await ctx.send(
-        f"🏰 **{g.name}**\n"
-        f"👥 Members: {g.member_count}\n"
-        f"📅 Created: {g.created_at.strftime('%Y-%m-%d')}"
-    )
-
-@bot.command()
-@commands.has_permissions(kick_members=True)
-async def kick(ctx, member: discord.Member, *, reason="No reason provided"):
-    if member == ctx.author:
-        await ctx.send("You can't kick yourself")
-        return
-
-    if member.top_role >= ctx.author.top_role:
-        await ctx.send("🚫 You can't moderate someone with an equal/higher role")
-        return
-
-
-    try:
-        await member.kick(reason=reason)
-        await ctx.send(f"👢 Kicked {member.mention}\n📄 Reason: {reason}")
-    except discord.Forbidden:
-        await ctx.send("❌ I can't kick this user (role too high)")
-
-@bot.command()
-@commands.has_permissions(ban_members=True)
-async def ban(ctx, member: discord.Member, *, reason="No reason provided"):
-    if member == ctx.author:
-        await ctx.send("You can't ban yourself")
-        return
-
-    if member.top_role >= ctx.author.top_role:
-        await ctx.send("🚫 You can't moderate someone with an equal/higher role")
-        return
-    
-    try:
-        await member.ban(reason=reason)
-        await ctx.send(f"🔨 Banned {member.mention}\n📄 Reason: {reason}")
-    except discord.Forbidden:
-        await ctx.send("❌ I can't ban this user (role too high)")
-
-@bot.command()
-@commands.has_permissions(moderate_members=True)
-async def timeout(ctx, member: discord.Member, minutes: int = 10, *, reason="No reason provided"):
-    if member == ctx.author:
-        await ctx.send("You can't timeout yourself")
-        return
-    
-    if member.top_role >= ctx.author.top_role:
-        await ctx.send("🚫 You can't moderate someone with an equal/higher role")
-        return
-
-    try:
-        duration = timedelta(minutes=minutes)
-        # set dm to user
-        await member.timeout(duration, reason=reason)
-        await ctx.send(
-            f"⏳ Timed out {member.mention} for **{minutes} minutes**\n📄 Reason: {reason}"
-        )
-    except discord.Forbidden:
-        await ctx.send("❌ I can't timeout this user (role too high)")
-
-@kick.error
-@ban.error
-@timeout.error
-async def mod_error(ctx, error):
-    if isinstance(error, commands.MissingPermissions):
-        await ctx.send("❌ You don't have permission to do that")
-    elif isinstance(error, commands.MissingRequiredArgument):
-        await ctx.send("❌ Missing arguments")
-
-@bot.command()
-@commands.check(command_channel)  
-async def about(ctx):
-    await ctx.send("🤖 Custom bot built by the community. Join to help shape it 👀")
-    
-@bot.command()
-@commands.check(command_channel)
-async def help(ctx):
-    embed = discord.Embed(
-        title="🤖 Bot Help",
-        description="Here’s what I can do 👇",
-        color=0x00ffcc
-    )
-
-    embed.add_field(
-        name="🎵 Music Commands",
-        value=(
-            "`!join`, `!leave`\n"
-            "`!play <file>` · `!playnow <file>`\n"
-            "`!yt <query>`\n"
-            "`!pause`, `!resume`, `!skip`\n"
-            "`!stop [queue]`\n"
-            "`!queue`, `!loop`, `!volume <0-200>`, `!list`\n"
-        ),
-        inline=False
-    )
-
-    # NEW SECTION: Leveling
-    embed.add_field(
-        name="📈 Leveling & Economy",
-        value=(
-            "`!rank [@user]` · Check your level & XP\n"
-            "`!leaderboard` · See the top chatters\n"
-            "💡 *Reach **Level 15** to unlock Trusted Member!*"
-        ),
-        inline=False
-    )
-
-    embed.add_field(
-        name="🎲 Fun Commands",
-        value=(
-            "`!coinflip`, `!dice`\n"
-            "`!eightball <question>`\n"
-            "`!rate <thing>`\n"
-            "`!slap @user`, `!touchgrass @user`"
-        ),
-        inline=False
-    )
-
-    embed.add_field(
-        name="ℹ️ Info Commands",
-        value=(
-            "`!about`, `!uptime`\n"
-            "`!serverinfo`, `!whois [@user]`"
-        ),
-        inline=False
-    )
-
-    embed.add_field(
-        name="🛠️ Moderation",
-        value=(
-            "`!kick @user [reason]`\n"
-            "`!ban @user [reason]`\n"
-            "`!timeout @user [minutes] [reason]`"
-        ),
-        inline=False
-    )
-
-    # Added logic for Owner commands (only shows if you call it)
-    if ctx.author.id == MY_USER_ID:
-        embed.add_field(
-            name="👑 Owner Only",
-            value="`!dm @user <msg>`, `!testjoin`, `!exit` ",
-            inline=False
-        )
-
-    embed.set_footer(text=f"Requested by {ctx.author.name} | Built by Spatulari 🧠")
-
-    await ctx.send(embed=embed)
-
-@bot.command()
 @commands.has_role(OWNER_ROLE_ID)
 async def exit(ctx):
     await update_status("offline")
@@ -881,6 +715,9 @@ async def loop(ctx):
 
 async def load_cogs():
     await bot.load_extension("cogs.fun")
+    await bot.load_extension("cogs.moderation")
+    await bot.load_extension("cogs.utils")
+
 
 asyncio.run(load_cogs())
 bot.run(TOKEN_STR)
