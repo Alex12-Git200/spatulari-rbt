@@ -4,7 +4,11 @@ import os
 import yt_dlp
 from utils.checks import command_channel
 from config import *
+import sys
+import asyncio
 
+if sys.platform == 'win32':
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
 def music_channel_commands(ctx):
     return ctx.channel.id == MUSIC_COMMANDS_CHANNEL_ID
@@ -21,6 +25,7 @@ def get_state(bot, guild_id):
         }
 
     return bot.music[guild_id]
+
 
 
 def create_source(path):
@@ -68,6 +73,28 @@ def get_youtube_audio(query):
         return entry["id"], entry["title"]
 
 
+async def hard_voice_reset(ctx):
+    vc = ctx.guild.voice_client
+    if vc is None:
+        return
+
+    try:
+        vc.stop()
+    except:
+        pass
+
+    try:
+        await vc.disconnect(force=True)
+    except:
+        pass
+
+    await asyncio.sleep(2.5)
+
+    # reconnect
+    if ctx.author.voice and ctx.author.voice.channel:
+        await ctx.author.voice.channel.connect()
+
+
 class Music(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
@@ -83,7 +110,7 @@ class Music(commands.Cog):
 
     @commands.command()
     @commands.check(music_channel_commands)
-    @commands.has_any_role(OWNER_ROLE_ID, MOD_ROLE_ID, ADIN_ROLE_ID, TRUSTED_MEMBER_ROLE_ID)
+    @commands.has_any_role(OWNER_ROLE_ID, MOD_ROLE_ID, ADMIN_ROLE_ID, TRUSTED_MEMBER_ROLE_ID)
     async def join(self, ctx):
         if ctx.author.voice is None:
             await ctx.send("Join a voice channel first")
@@ -98,7 +125,7 @@ class Music(commands.Cog):
 
     @commands.command()
     @commands.check(music_channel_commands)
-    @commands.has_any_role(OWNER_ROLE_ID, MOD_ROLE_ID, ADIN_ROLE_ID, TRUSTED_MEMBER_ROLE_ID)
+    @commands.has_any_role(OWNER_ROLE_ID, MOD_ROLE_ID, ADMIN_ROLE_ID, TRUSTED_MEMBER_ROLE_ID)
     async def leave(self, ctx):
         if ctx.voice_client is None:
             await ctx.send("I'm not in a voice channel")
@@ -112,7 +139,7 @@ class Music(commands.Cog):
 
     @commands.command()
     @commands.check(music_channel_commands)
-    @commands.has_any_role(OWNER_ROLE_ID, MOD_ROLE_ID, ADIN_ROLE_ID, TRUSTED_MEMBER_ROLE_ID)
+    @commands.has_any_role(OWNER_ROLE_ID, MOD_ROLE_ID, ADMIN_ROLE_ID, TRUSTED_MEMBER_ROLE_ID)
     async def play(self, ctx, filename: str):
         if ctx.author.voice is None:
             await ctx.send("Join a voice channel first")
@@ -143,7 +170,7 @@ class Music(commands.Cog):
 
     @commands.command()
     @commands.check(music_channel_commands)
-    @commands.has_any_role(OWNER_ROLE_ID, MOD_ROLE_ID, ADIN_ROLE_ID, TRUSTED_MEMBER_ROLE_ID)
+    @commands.has_any_role(OWNER_ROLE_ID, MOD_ROLE_ID, ADMIN_ROLE_ID, TRUSTED_MEMBER_ROLE_ID)
     async def playnow(self, ctx, filename: str):
         if ctx.author.voice is None:
             await ctx.send("Join a voice channel first")
@@ -173,7 +200,7 @@ class Music(commands.Cog):
 
     @commands.command()
     @commands.check(music_channel_commands)
-    @commands.has_any_role(OWNER_ROLE_ID, MOD_ROLE_ID, ADIN_ROLE_ID, TRUSTED_MEMBER_ROLE_ID)
+    @commands.has_any_role(OWNER_ROLE_ID, MOD_ROLE_ID, ADMIN_ROLE_ID, TRUSTED_MEMBER_ROLE_ID)
     async def yt(self, ctx, *, query: str):
         if ctx.author.voice is None:
             await ctx.send("Join a voice channel first")
@@ -188,6 +215,11 @@ class Music(commands.Cog):
             with yt_dlp.YoutubeDL({"format": "bestaudio", "quiet": True}) as ydl:
                 info = ydl.extract_info(video_id, download=False)
                 url = info["url"]
+
+            ffmpeg_options = {
+                'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5',
+                'options': '-vn'
+            }
 
             return discord.FFmpegOpusAudio(
                 executable="ffmpeg.exe",
@@ -210,7 +242,7 @@ class Music(commands.Cog):
 
     @commands.command()
     @commands.check(music_channel_commands)
-    @commands.has_any_role(OWNER_ROLE_ID, MOD_ROLE_ID, ADIN_ROLE_ID, TRUSTED_MEMBER_ROLE_ID)
+    @commands.has_any_role(OWNER_ROLE_ID, MOD_ROLE_ID, ADMIN_ROLE_ID, TRUSTED_MEMBER_ROLE_ID)
     async def skip(self, ctx):
         vc = ctx.voice_client
         if vc is None or not vc.is_playing():
@@ -222,7 +254,7 @@ class Music(commands.Cog):
 
     @commands.command()
     @commands.check(music_channel_commands)
-    @commands.has_any_role(OWNER_ROLE_ID, MOD_ROLE_ID, ADIN_ROLE_ID, TRUSTED_MEMBER_ROLE_ID)
+    @commands.has_any_role(OWNER_ROLE_ID, MOD_ROLE_ID, ADMIN_ROLE_ID, TRUSTED_MEMBER_ROLE_ID)
     async def stop(self, ctx, target: str = None):
         vc = ctx.voice_client
         if vc is None:
@@ -245,7 +277,7 @@ class Music(commands.Cog):
 
     @commands.command()
     @commands.check(music_channel_commands)
-    @commands.has_any_role(OWNER_ROLE_ID, MOD_ROLE_ID, ADIN_ROLE_ID, TRUSTED_MEMBER_ROLE_ID)
+    @commands.has_any_role(OWNER_ROLE_ID, MOD_ROLE_ID, ADMIN_ROLE_ID, TRUSTED_MEMBER_ROLE_ID)
     async def pause(self, ctx):
         vc = ctx.voice_client
         if vc is None or not vc.is_playing():
@@ -257,7 +289,7 @@ class Music(commands.Cog):
 
     @commands.command()
     @commands.check(music_channel_commands)
-    @commands.has_any_role(OWNER_ROLE_ID, MOD_ROLE_ID, ADIN_ROLE_ID, TRUSTED_MEMBER_ROLE_ID)
+    @commands.has_any_role(OWNER_ROLE_ID, MOD_ROLE_ID, ADMIN_ROLE_ID, TRUSTED_MEMBER_ROLE_ID)
     async def resume(self, ctx):
         vc = ctx.voice_client
         if vc is None or not vc.is_paused():
@@ -269,7 +301,7 @@ class Music(commands.Cog):
 
     @commands.command()
     @commands.check(music_channel_commands)
-    @commands.has_any_role(OWNER_ROLE_ID, MOD_ROLE_ID, ADIN_ROLE_ID, TRUSTED_MEMBER_ROLE_ID)
+    @commands.has_any_role(OWNER_ROLE_ID, MOD_ROLE_ID, ADMIN_ROLE_ID, TRUSTED_MEMBER_ROLE_ID)
     async def queue(self, ctx):
         state = get_state(self.bot, ctx.guild.id)
 
@@ -285,7 +317,7 @@ class Music(commands.Cog):
 
     @commands.command()
     @commands.check(music_channel_commands)
-    @commands.has_any_role(OWNER_ROLE_ID, MOD_ROLE_ID, ADIN_ROLE_ID, TRUSTED_MEMBER_ROLE_ID)
+    @commands.has_any_role(OWNER_ROLE_ID, MOD_ROLE_ID, ADMIN_ROLE_ID, TRUSTED_MEMBER_ROLE_ID)
     async def volume(self, ctx, vol: int):
         global VOLUME
 
@@ -298,7 +330,7 @@ class Music(commands.Cog):
 
     @commands.command()
     @commands.check(music_channel_commands)
-    @commands.has_any_role(OWNER_ROLE_ID, MOD_ROLE_ID, ADIN_ROLE_ID, TRUSTED_MEMBER_ROLE_ID)
+    @commands.has_any_role(OWNER_ROLE_ID, MOD_ROLE_ID, ADMIN_ROLE_ID, TRUSTED_MEMBER_ROLE_ID)
     async def list(self, ctx):
         audio_dir = "audio"
 
@@ -320,13 +352,20 @@ class Music(commands.Cog):
 
     @commands.command()
     @commands.check(music_channel_commands)
-    @commands.has_any_role(OWNER_ROLE_ID, MOD_ROLE_ID, ADIN_ROLE_ID, TRUSTED_MEMBER_ROLE_ID)
+    @commands.has_any_role(OWNER_ROLE_ID, MOD_ROLE_ID, ADMIN_ROLE_ID, TRUSTED_MEMBER_ROLE_ID)
     async def loop(self, ctx):
         state = get_state(self.bot, ctx.guild.id)
         state["loop"] = not state["loop"]
 
         status = "🔁 **ON**" if state["loop"] else "⏹ **OFF**"
         await ctx.send(f"Loop mode is now {status}")
+
+    @commands.command()
+    @commands.has_any_role(OWNER_ROLE_ID, ADMIN_ROLE_ID)
+    async def resetvc(self, ctx):
+        await ctx.send("🔄 Hard resetting voice…")
+        await hard_voice_reset(ctx)
+        await ctx.send("✅ Voice reset complete")
 
 
 async def setup(bot):
